@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Виртуальное окружение
+venv/
+env/
+.venv/
+ENV/
+
+# Переменные окружения
+.env
+.env.local
+.env.*.local
+config.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Операционная система
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# База данных
+*.db
+*.sqlite3
+*.sqlite
+
+# Логи
+*.log
+logs/
+
+# Тесты и линтеры
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Ruff formatter cache
+.ruff_cache/
+
+# Pyright
+.pyright/
+
+# Coverage data
+.coverage.*
+
+# macOS resource forks
+._*
