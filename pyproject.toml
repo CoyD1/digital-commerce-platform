@@ -7,11 +7,14 @@ authors = [
     { name = "CoyD1", email = "apranovich22010kostya@mail.ru" }
 ]
 requires-python = ">=3.13"
-dependencies = []
-
-[project.scripts]
-digital-commerce-platform = "digital_commerce_platform:main"
+dependencies = [
+    "fastapi>=0.141.1",
+    "uvicorn>=0.52.4",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+package = false
