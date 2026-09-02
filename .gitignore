@@ -18,7 +18,6 @@ ENV/
 .env
 .env.local
 .env.*.local
-config.ini
 
 # IDE
 .vscode/
