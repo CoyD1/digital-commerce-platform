@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import BigInteger, String, Text, DateTime, Enum as SQLEnum, Identity
+from sqlalchemy import BigInteger, String, Text, DateTime, Enum as SQLEnum, Identity, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -43,11 +43,14 @@ class User(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        server_default=func.now(),
         nullable=False,
     )
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
         nullable=False,
     )
 
