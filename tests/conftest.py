@@ -3,6 +3,8 @@ import os
 import sys
 import selectors
 
+from alembic import command
+from alembic.config import Config
 import pytest
 import pytest_asyncio
 
@@ -31,6 +33,15 @@ def pytest_asyncio_loop_factories(config, item):
         }
 
     return {"default": asyncio.new_event_loop}
+
+@pytest.fixture(scope="session", autouse=True)
+def apply_migrations():
+    config = Config("alembic-test.ini")
+    config.set_main_option(
+        "sqlalchemy.url",
+        TEST_DATABASE_URL.replace("%", "%%"),
+    )
+    command.upgrade(config, "head")
 
 @pytest_asyncio.fixture
 async def db_session():
