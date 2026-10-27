@@ -16,8 +16,17 @@ from app.users.service import (
     UserService,
 )
 from app.core.security import create_access_token
+from app.users.dependencies import get_current_user
+from app.users.model import User
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+router = APIRouter(
+    prefix="/api/v1/auth", 
+    tags=["auth"]
+)
+users_router = APIRouter(
+    prefix="/api/v1/users", 
+    tags=["users"],
+)
 
 @router.post(
     "/register",
@@ -78,3 +87,9 @@ async def login(
     return TokenResponse(
         access_token=create_access_token(user.id),
     )
+
+@users_router.get("/me", response_model=UserRead)
+async def get_me(
+    current_user: User = Depends(get_current_user),
+):
+    return current_user
