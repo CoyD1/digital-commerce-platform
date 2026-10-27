@@ -4,9 +4,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.users.repository import UserRepository
-from app.users.schemas import UserCreate, UserRead
-from app.users.service import EmailAlreadyExistsError, UserService
-
+from app.users.schemas import (
+    LoginRequest,
+    TokenResponse,
+    UserCreate,
+    UserRead,
+)
+from app.users.service import (
+    EmailAlreadyExistsError,
+    InvalidCredentialsError,
+    UserService,
+)
+from app.core.security import create_access_token
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -45,3 +54,27 @@ async def register(
         raise
 
     return user
+
+@router.post("/login", response_model=TokenResponse)
+async def login(
+    data: LoginRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    repository = UserRepository(session)
+    service = UserService(repository)
+
+    try:
+        user = await service.authenticate(
+            email=str(data.email),
+            password=data.password,
+        )
+    except InvalidCredentialsError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from None
+
+    return TokenResponse(
+        access_token=create_access_token(user.id),
+    )

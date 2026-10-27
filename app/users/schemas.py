@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -26,3 +27,12 @@ class UserRead(BaseModel):
     status: UserStatus
     created_at: datetime
     updated_at: datetime
+
+class LoginRequest(BaseModel):
+    email: EmailStr = Field(max_length=100)
+    password: str = Field(min_length=1, max_length=128)
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    
