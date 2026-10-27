@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
+from pydantic import Field, SecretStr
 
 
 class Settings(BaseSettings):
@@ -10,6 +11,8 @@ class Settings(BaseSettings):
     postgres_db: str
     postgres_user: str
     postgres_password: str
+    jwt_secret_key: SecretStr = Field(min_length=32)
+    access_token_expire_minutes: int = Field(default=15, gt=0)
     @property
     def database_url(self) -> URL:
         database_url = URL.create(
