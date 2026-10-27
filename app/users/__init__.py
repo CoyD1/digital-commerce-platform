@@ -3,6 +3,6 @@ from app.users.repository import UserRepository
 
 __all__ = [
     "User",
-    "UserStatus",
     "UserRepository",
+    "UserStatus",
 ]

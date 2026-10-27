@@ -1,22 +1,22 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 import pytest
 
 from app.core.config import settings
 from app.core.security import (
-    create_access_token,
     InvalidAccessTokenError,
+    create_access_token,
     decode_access_token,
 )
 
 
 def test_create_access_token_contains_user_and_expiration():
-    before = int(datetime.now(timezone.utc).timestamp())
+    before = int(datetime.now(UTC).timestamp())
 
     token = create_access_token(user_id=42)
 
-    after = int(datetime.now(timezone.utc).timestamp())
+    after = int(datetime.now(UTC).timestamp())
 
     payload = jwt.decode(
         token,
@@ -40,7 +40,7 @@ def test_decode_access_token_returns_user_id():
     assert user_id == 42
 
 def test_decode_access_token_rejects_expired_token():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     token = jwt.encode(
         {
@@ -56,7 +56,7 @@ def test_decode_access_token_rejects_expired_token():
         decode_access_token(token)
 
 def test_decode_access_token_rejects_wrong_signature():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     token = jwt.encode(
         {
@@ -73,7 +73,7 @@ def test_decode_access_token_rejects_wrong_signature():
 
 @pytest.mark.parametrize("subject", ["abc", "", "0", "-1"])
 def test_decode_access_token_rejects_invalid_user_id(subject):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     token = jwt.encode(
         {
@@ -90,7 +90,7 @@ def test_decode_access_token_rejects_invalid_user_id(subject):
 
 @pytest.mark.parametrize("missing_claim", ["sub", "iat", "exp"])
 def test_decode_access_token_rejects_missing_claim(missing_claim):
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     payload = {
         "sub": "42",

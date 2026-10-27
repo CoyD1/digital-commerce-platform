@@ -1,10 +1,9 @@
-from pwdlib import PasswordHash
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
+from pwdlib import PasswordHash
 
 from app.core.config import settings
-
 
 _password_hasher = PasswordHash.recommended()
 
@@ -16,7 +15,7 @@ def verify_password(password: str, password_hash: str) -> bool:
     return _password_hasher.verify(password, password_hash)
 
 def create_access_token(user_id: int) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     expires_at = now + timedelta(
         minutes=settings.access_token_expire_minutes

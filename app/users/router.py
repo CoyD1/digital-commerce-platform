@@ -2,7 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import create_access_token
 from app.db.session import get_session
+from app.users.dependencies import get_current_user
+from app.users.model import User
 from app.users.repository import UserRepository
 from app.users.schemas import (
     LoginRequest,
@@ -15,9 +18,6 @@ from app.users.service import (
     InvalidCredentialsError,
     UserService,
 )
-from app.core.security import create_access_token
-from app.users.dependencies import get_current_user
-from app.users.model import User
 
 router = APIRouter(
     prefix="/api/v1/auth", 

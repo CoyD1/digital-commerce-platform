@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 
@@ -15,5 +15,5 @@ async def check_health_ready(
     db: AsyncSession = Depends(get_session)
 ):
     query = text("Select 1")
-    result = await db.execute(query)
+    await db.execute(query)
     return {"status": "ready"}

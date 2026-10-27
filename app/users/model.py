@@ -1,10 +1,12 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import BigInteger, String, Text, DateTime, Enum as SQLEnum, Identity, func
+from sqlalchemy import BigInteger, DateTime, Identity, String, Text, func
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+
 
 class UserStatus(str, Enum):
     ACTIVE = "ACTIVE"

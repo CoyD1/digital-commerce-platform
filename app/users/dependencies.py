@@ -10,7 +10,6 @@ from app.db.session import get_session
 from app.users.model import User, UserStatus
 from app.users.repository import UserRepository
 
-
 bearer_scheme = HTTPBearer(auto_error=False)
 
 

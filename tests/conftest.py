@@ -1,16 +1,16 @@
 import asyncio
 import os
-import sys
 import selectors
+import sys
 
-from alembic import command
-from alembic.config import Config
 import pytest
 import pytest_asyncio
-
+from alembic.config import Config
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
+
+from alembic import command
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 

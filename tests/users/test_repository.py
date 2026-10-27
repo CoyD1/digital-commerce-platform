@@ -1,9 +1,9 @@
 import pytest
-
 from sqlalchemy.exc import IntegrityError
 
 from app.users.model import User, UserStatus
 from app.users.repository import UserRepository
+
 
 @pytest.mark.asyncio
 async def test_get_by_id_returns_user(db_session):
