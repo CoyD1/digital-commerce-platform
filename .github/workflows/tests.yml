@@ -1,0 +1,56 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: commerce_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d commerce_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5433"
+      POSTGRES_DB: commerce_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test-password
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:test-password@localhost:5433/commerce_test
+      JWT_SECRET_KEY: ci-only-test-signing-key-never-use-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
+        with:
+          version: "0.12.7"
+
+      - name: Install Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --locked --dev
+
+      - name: Run tests
+        run: uv run --locked pytest -q
