@@ -13,6 +13,7 @@ def test_user_create_strips_name():
 
     assert user.name == "Alice"
 
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [
@@ -34,7 +35,4 @@ def test_user_create_rejects_invalid_fields(field, value):
     with pytest.raises(ValidationError) as error:
         UserCreate(**data)
 
-    assert any(
-        item["loc"] == (field,)
-        for item in error.value.errors()
-    )
+    assert any(item["loc"] == (field,) for item in error.value.errors())

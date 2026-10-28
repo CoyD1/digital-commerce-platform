@@ -35,6 +35,7 @@ async def test_register_creates_user_with_hashed_password(db_session):
     assert stored_user is not None
     assert stored_user.email == user.email
 
+
 @pytest.mark.asyncio
 async def test_register_rejects_existing_email(db_session):
     repository = UserRepository(db_session)
@@ -56,9 +57,7 @@ async def test_register_rejects_existing_email(db_session):
     with pytest.raises(EmailAlreadyExistsError):
         await service.register(second_registration)
 
-    stored_user = await repository.get_by_email(
-        "duplicate-registration@example.com"
-    )
+    stored_user = await repository.get_by_email("duplicate-registration@example.com")
 
     assert stored_user is not None
     assert stored_user.name == "Alice"
@@ -66,6 +65,7 @@ async def test_register_rejects_existing_email(db_session):
         first_registration.password,
         stored_user.password_hash,
     )
+
 
 @pytest.mark.asyncio
 async def test_authenticate_returns_user_for_valid_credentials(db_session):
@@ -87,6 +87,7 @@ async def test_authenticate_returns_user_for_valid_credentials(db_session):
     assert authenticated_user.id == created_user.id
     assert authenticated_user.email == created_user.email
 
+
 @pytest.mark.asyncio
 async def test_authenticate_rejects_unknown_email(db_session):
     repository = UserRepository(db_session)
@@ -97,6 +98,7 @@ async def test_authenticate_rejects_unknown_email(db_session):
             email="unknown@example.com",
             password="example-password",
         )
+
 
 @pytest.mark.asyncio
 async def test_authenticate_rejects_wrong_password(db_session):
@@ -116,6 +118,7 @@ async def test_authenticate_rejects_wrong_password(db_session):
             email="wrong-password@example.com",
             password="incorrect-password",
         )
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(

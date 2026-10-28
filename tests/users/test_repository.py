@@ -24,6 +24,7 @@ async def test_get_by_id_returns_user(db_session):
     assert result.id == created_user.id
     assert result.email == created_user.email
 
+
 @pytest.mark.asyncio
 async def test_get_by_id_returns_none(db_session):
     repository = UserRepository(db_session)
@@ -31,6 +32,7 @@ async def test_get_by_id_returns_none(db_session):
     result = await repository.get_by_id(9999999999999)
 
     assert result is None
+
 
 @pytest.mark.asyncio
 async def test_get_by_email_returns_user(db_session):
@@ -58,6 +60,7 @@ async def test_get_by_email_returns_none(db_session):
     result = await repository.get_by_email("missing@example.com")
 
     assert result is None
+
 
 @pytest.mark.asyncio
 async def test_create_rejects_duplicate_email(db_session):

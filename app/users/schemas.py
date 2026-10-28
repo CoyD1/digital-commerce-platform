@@ -17,7 +17,8 @@ class UserCreate(BaseModel):
         if isinstance(value, str):
             return value.strip()
         return value
-    
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,11 +29,12 @@ class UserRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class LoginRequest(BaseModel):
     email: EmailStr = Field(max_length=100)
     password: str = Field(min_length=1, max_length=128)
 
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: Literal["bearer"] = "bearer"
-    

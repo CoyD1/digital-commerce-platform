@@ -9,6 +9,7 @@ def test_correct_password_matches_hash():
     assert password_hash != password
     assert verify_password(password, password_hash)
 
+
 def test_wrong_password_does_not_match_hash():
     password_hash = hash_password("example-password")
 

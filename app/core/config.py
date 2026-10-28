@@ -13,22 +13,20 @@ class Settings(BaseSettings):
     postgres_password: str
     jwt_secret_key: SecretStr = Field(min_length=32)
     access_token_expire_minutes: int = Field(default=15, gt=0)
+
     @property
     def database_url(self) -> URL:
         database_url = URL.create(
-        "postgresql+psycopg",
-        username=self.postgres_user,
-        password=self.postgres_password,
-        host=self.postgres_host,
-        database=self.postgres_db,
-        port=self.postgres_port,
+            "postgresql+psycopg",
+            username=self.postgres_user,
+            password=self.postgres_password,
+            host=self.postgres_host,
+            database=self.postgres_db,
+            port=self.postgres_port,
         )
         return database_url
-    
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+
 
 settings = Settings()

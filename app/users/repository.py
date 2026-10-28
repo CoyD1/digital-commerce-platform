@@ -5,7 +5,6 @@ from app.users.model import User
 
 
 class UserRepository:
-
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 

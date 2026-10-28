@@ -56,6 +56,7 @@ async def test_me_rejects_request_without_token(client):
     }
     assert response.headers["www-authenticate"] == "Bearer"
 
+
 @pytest.mark.asyncio
 async def test_me_rejects_invalid_token(client):
     response = await client.get(
@@ -69,6 +70,7 @@ async def test_me_rejects_invalid_token(client):
     assert response.json() == {
         "detail": "Invalid authentication credentials",
     }
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(

@@ -64,7 +64,4 @@ async def test_register_returns_validation_error_for_invalid_email(client):
 
     errors = response.json()["detail"]
 
-    assert any(
-        error["loc"] == ["body", "email"]
-        for error in errors
-    )
+    assert any(error["loc"] == ["body", "email"] for error in errors)

@@ -7,22 +7,20 @@ from app.users.schemas import UserCreate
 class EmailAlreadyExistsError(Exception):
     pass
 
+
 class InvalidCredentialsError(Exception):
     pass
+
 
 class UserService:
     def __init__(self, repository: UserRepository) -> None:
         self._repository = repository
 
     async def register(self, data: UserCreate) -> User:
-        existing_user = await self._repository.get_by_email(
-                str(data.email)
-            )
+        existing_user = await self._repository.get_by_email(str(data.email))
 
         if existing_user is not None:
-            raise EmailAlreadyExistsError(
-                "User with this email already exists"
-            )
+            raise EmailAlreadyExistsError("User with this email already exists")
 
         user = User(
             name=data.name,
@@ -32,7 +30,7 @@ class UserService:
         )
 
         return await self._repository.create(user)
-    
+
     async def authenticate(self, email: str, password: str):
         user = await self._repository.get_by_email(email)
 

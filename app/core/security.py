@@ -11,15 +11,15 @@ _password_hasher = PasswordHash.recommended()
 def hash_password(password: str) -> str:
     return _password_hasher.hash(password)
 
+
 def verify_password(password: str, password_hash: str) -> bool:
     return _password_hasher.verify(password, password_hash)
+
 
 def create_access_token(user_id: int) -> str:
     now = datetime.now(UTC)
 
-    expires_at = now + timedelta(
-        minutes=settings.access_token_expire_minutes
-    )
+    expires_at = now + timedelta(minutes=settings.access_token_expire_minutes)
 
     payload = {
         "sub": str(user_id),
@@ -33,8 +33,10 @@ def create_access_token(user_id: int) -> str:
         algorithm="HS256",
     )
 
+
 class InvalidAccessTokenError(Exception):
     pass
+
 
 def decode_access_token(token: str) -> int:
     try:
@@ -51,8 +53,6 @@ def decode_access_token(token: str) -> int:
             raise ValueError("User ID must be positive")
 
     except (jwt.InvalidTokenError, ValueError, TypeError) as error:
-        raise InvalidAccessTokenError(
-            "Invalid access token"
-        ) from error
+        raise InvalidAccessTokenError("Invalid access token") from error
 
     return user_id

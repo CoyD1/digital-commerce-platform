@@ -19,14 +19,12 @@ from app.users.service import (
     UserService,
 )
 
-router = APIRouter(
-    prefix="/api/v1/auth", 
-    tags=["auth"]
-)
+router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 users_router = APIRouter(
-    prefix="/api/v1/users", 
+    prefix="/api/v1/users",
     tags=["users"],
 )
+
 
 @router.post(
     "/register",
@@ -64,6 +62,7 @@ async def register(
 
     return user
 
+
 @router.post("/login", response_model=TokenResponse)
 async def login(
     data: LoginRequest,
@@ -87,6 +86,7 @@ async def login(
     return TokenResponse(
         access_token=create_access_token(user.id),
     )
+
 
 @users_router.get("/me", response_model=UserRead)
 async def get_me(

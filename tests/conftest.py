@@ -15,24 +15,20 @@ from alembic import command
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL")
 
 if not TEST_DATABASE_URL:
-    raise RuntimeError(
-        "Set TEST_DATABASE_URL to the commerce_test database"
-    )
+    raise RuntimeError("Set TEST_DATABASE_URL to the commerce_test database")
 
 if make_url(TEST_DATABASE_URL).database != "commerce_test":
-    raise RuntimeError(
-        "Tests may run only against commerce_test"
-    )
+    raise RuntimeError("Tests may run only against commerce_test")
+
 
 def pytest_asyncio_loop_factories(config, item):
     if sys.platform == "win32":
         return {
-            "selector": lambda: asyncio.SelectorEventLoop(
-                selectors.SelectSelector()
-            )
+            "selector": lambda: asyncio.SelectorEventLoop(selectors.SelectSelector())
         }
 
     return {"default": asyncio.new_event_loop}
+
 
 @pytest.fixture(scope="session", autouse=True)
 def apply_migrations():
@@ -42,6 +38,7 @@ def apply_migrations():
         TEST_DATABASE_URL.replace("%", "%%"),
     )
     command.upgrade(config, "head")
+
 
 @pytest_asyncio.fixture
 async def db_session():

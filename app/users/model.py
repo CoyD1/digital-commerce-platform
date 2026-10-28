@@ -13,6 +13,7 @@ class UserStatus(str, Enum):
     BLOCKED = "BLOCKED"
     DELETED = "DELETED"
 
+
 class User(Base):
     __tablename__ = "users"
 

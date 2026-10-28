@@ -33,6 +33,7 @@ async def test_login_returns_access_token(client):
     assert body["token_type"] == "bearer"
     assert decode_access_token(body["access_token"]) == user_id
 
+
 @pytest.mark.asyncio
 async def test_login_rejects_wrong_password(client):
     registration_response = await client.post(
