@@ -14,6 +14,11 @@ class UserStatus(str, Enum):
     DELETED = "DELETED"
 
 
+class UserRole(str, Enum):
+    CUSTOMER = "CUSTOMER"
+    ADMIN = "ADMIN"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -36,6 +41,12 @@ class User(Base):
 
     status: Mapped[UserStatus] = mapped_column(
         SQLEnum(UserStatus, name="user_status"),
+        nullable=False,
+    )
+
+    role: Mapped[UserRole] = mapped_column(
+        SQLEnum(UserRole, name="user_role"),
+        server_default=UserRole.CUSTOMER.value,
         nullable=False,
     )
 

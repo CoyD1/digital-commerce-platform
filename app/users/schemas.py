@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.users.model import UserStatus
+from app.users.model import UserRole, UserStatus
 
 
 class UserCreate(BaseModel):
@@ -26,6 +26,7 @@ class UserRead(BaseModel):
     name: str
     email: EmailStr
     status: UserStatus
+    role: UserRole
     created_at: datetime
     updated_at: datetime
 
