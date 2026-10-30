@@ -47,3 +47,16 @@ class ProductRepository:
         result = await self._session.execute(statement)
 
         return list(result.scalars().all())
+
+    async def get_published_by_slug(
+        self,
+        slug: str,
+    ) -> Product | None:
+        statement = select(Product).where(
+            Product.slug == slug,
+            Product.status == ProductStatus.PUBLISHED,
+        )
+
+        result = await self._session.execute(statement)
+
+        return result.scalar_one_or_none()
