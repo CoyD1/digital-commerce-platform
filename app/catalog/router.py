@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
+from app.catalog.model import Product, ProductStatus
+from app.users.dependencies import require_admin
 from app.catalog.repository import ProductRepository
-from app.catalog.schemas import ProductRead
+from app.catalog.schemas import ProductCreate, ProductRead
 from app.db.session import get_session
 
 router = APIRouter(
@@ -39,5 +42,46 @@ async def get_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Product not found",
         )
+
+    return product
+
+
+@router.post(
+    "",
+    response_model=ProductRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
+async def create_product(
+    data: ProductCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    repository = ProductRepository(session)
+
+    product = Product(
+        title=data.title,
+        slug=data.slug,
+        description=data.description,
+        price_amount=data.price_amount,
+        currency=data.currency,
+        status=ProductStatus.DRAFT,
+    )
+
+    try:
+        product = await repository.create(product)
+        await session.commit()
+    except IntegrityError as error:
+        await session.rollback()
+
+        diagnostics = getattr(error.orig, "diag", None)
+        constraint_name = getattr(diagnostics, "constraint_name", None)
+
+        if constraint_name == "products_slug_key":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Product slug already exists",
+            ) from error
+
+        raise
 
     return product
