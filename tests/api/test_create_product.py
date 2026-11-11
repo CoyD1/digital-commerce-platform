@@ -38,6 +38,19 @@ async def admin_headers(db_session):
     return {"Authorization": f"Bearer {token}"}
 
 
+@pytest_asyncio.fixture
+async def draft_product_id(client, admin_headers, product_payload):
+    response = await client.post(
+        "/api/v1/products",
+        json=product_payload,
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 201
+
+    return response.json()["id"]
+
+
 @pytest.mark.asyncio
 async def test_admin_creates_draft_product(
     client,
@@ -170,3 +183,125 @@ async def test_create_product_rejects_invalid_fields(
     )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_publish_makes_product_public(
+    client,
+    admin_headers,
+    draft_product_id,
+    product_payload,
+):
+    response = await client.post(
+        f"/api/v1/products/{draft_product_id}/publish",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "PUBLISHED"
+
+    public_response = await client.get(f"/api/v1/products/{product_payload['slug']}")
+
+    assert public_response.status_code == 200
+    assert public_response.json()["id"] == draft_product_id
+
+    list_response = await client.get("/api/v1/products")
+
+    assert list_response.status_code == 200
+    assert draft_product_id in [product["id"] for product in list_response.json()]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "existing_status",
+    [ProductStatus.PUBLISHED, ProductStatus.ARCHIVED],
+)
+async def test_publish_rejects_non_draft_product(
+    client,
+    db_session,
+    admin_headers,
+    draft_product_id,
+    existing_status,
+):
+    repository = ProductRepository(db_session)
+    product = await repository.get_by_id(draft_product_id)
+
+    assert product is not None
+
+    product.status = existing_status
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/products/{draft_product_id}/publish",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Only draft products can be published",
+    }
+
+    saved_product = await repository.get_by_id(draft_product_id)
+
+    assert saved_product is not None
+    assert saved_product.status == existing_status
+
+
+@pytest.mark.asyncio
+async def test_publish_returns_404_for_missing_product(
+    client,
+    admin_headers,
+):
+    response = await client.post(
+        "/api/v1/products/9223372036854775807/publish",
+        headers=admin_headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Product not found"}
+
+
+@pytest.mark.asyncio
+async def test_publish_requires_authentication(
+    client,
+    draft_product_id,
+):
+    response = await client.post(
+        f"/api/v1/products/{draft_product_id}/publish",
+    )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_customer_cannot_publish_product(
+    client,
+    db_session,
+    draft_product_id,
+):
+    users = UserRepository(db_session)
+
+    customer = await users.create(
+        User(
+            name="Customer",
+            email="publish-customer@example.com",
+            password_hash="unused-in-this-test",
+            status=UserStatus.ACTIVE,
+            role=UserRole.CUSTOMER,
+        )
+    )
+
+    token = create_access_token(customer.id)
+
+    response = await client.post(
+        f"/api/v1/products/{draft_product_id}/publish",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 403
+
+    products = ProductRepository(db_session)
+    product = await products.get_by_id(draft_product_id)
+
+    assert product is not None
+    assert product.status == ProductStatus.DRAFT
