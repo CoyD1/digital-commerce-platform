@@ -8,6 +8,7 @@ from app.catalog.model import Product, ProductStatus
 from app.catalog.repository import ProductRepository
 from app.catalog.schemas import ProductCreate, ProductRead
 from app.catalog.service import (
+    ProductCannotBeArchivedError,
     ProductCannotBePublishedError,
     ProductNotFoundError,
     ProductService,
@@ -124,6 +125,41 @@ async def publish_product(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Only draft products can be published",
+        ) from None
+
+    return product
+
+
+@router.post(
+    "/{product_id}/archive",
+    response_model=ProductRead,
+    dependencies=[Depends(require_admin)],
+)
+async def archive_product(
+    product_id: Annotated[int, Path(gt=0, le=9223372036854775807)],
+    session: AsyncSession = Depends(get_session),
+):
+    repository = ProductRepository(session)
+    service = ProductService(repository)
+
+    try:
+        product = await service.archive(product_id)
+        await session.commit()
+
+    except ProductNotFoundError:
+        await session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        ) from None
+
+    except ProductCannotBeArchivedError:
+        await session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only draft or published products can be archived",
         ) from None
 
     return product

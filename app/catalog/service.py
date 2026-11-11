@@ -10,6 +10,10 @@ class ProductCannotBePublishedError(Exception):
     pass
 
 
+class ProductCannotBeArchivedError(Exception):
+    pass
+
+
 class ProductService:
     def __init__(self, repository: ProductRepository) -> None:
         self._repository = repository
@@ -24,5 +28,21 @@ class ProductService:
             raise ProductCannotBePublishedError
 
         product.status = ProductStatus.PUBLISHED
+
+        return product
+
+    async def archive(self, product_id: int) -> Product:
+        product = await self._repository.get_by_id_for_update(product_id)
+
+        if product is None:
+            raise ProductNotFoundError
+
+        if product.status not in (
+            ProductStatus.DRAFT,
+            ProductStatus.PUBLISHED,
+        ):
+            raise ProductCannotBeArchivedError
+
+        product.status = ProductStatus.ARCHIVED
 
         return product
