@@ -75,3 +75,19 @@ class ProductRepository:
         result = await self._session.execute(statement)
 
         return result.scalar_one_or_none()
+
+    async def get_many_for_update(
+        self,
+        product_ids: list[int],
+    ) -> list[Product]:
+        statement = (
+            select(Product)
+            .where(Product.id.in_(product_ids))
+            .order_by(Product.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
+        result = await self._session.execute(statement)
+
+        return list(result.scalars().all())
