@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app.catalog.model import Product, ProductStatus
 from app.core.security import create_access_token
-from app.orders.model import Order, OrderItem
+from app.orders.model import Order, OrderItem, OrderStatus
 from app.users.model import User, UserRole, UserStatus
 
 
@@ -347,3 +347,154 @@ async def test_read_orders_rejects_invalid_parameters(
     response = await client.get(path, headers=headers)
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_cancel_pending_order(
+    client,
+    db_session,
+    checkout_data,
+    placed_order,
+):
+    _, _, headers = checkout_data
+
+    response = await client.post(
+        f"/api/v1/orders/{placed_order['id']}/cancel",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        **placed_order,
+        "status": "CANCELLED",
+    }
+
+    order = await db_session.get(Order, placed_order["id"])
+    assert order is not None
+
+    await db_session.refresh(order)
+
+    assert order.status == OrderStatus.CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_repeated_cancellation_returns_same_order(
+    client,
+    db_session,
+    checkout_data,
+    placed_order,
+):
+    _, _, headers = checkout_data
+    url = f"/api/v1/orders/{placed_order['id']}/cancel"
+
+    first_response = await client.post(url, headers=headers)
+
+    assert first_response.status_code == 200
+
+    order = await db_session.get(Order, placed_order["id"])
+    assert order is not None
+
+    await db_session.refresh(order)
+    updated_at = order.updated_at
+
+    second_response = await client.post(url, headers=headers)
+
+    assert second_response.status_code == 200
+    assert second_response.json() == first_response.json()
+
+    await db_session.refresh(order)
+
+    assert order.status == OrderStatus.CANCELLED
+    assert order.updated_at == updated_at
+
+
+@pytest.mark.asyncio
+async def test_paid_order_cannot_be_cancelled(
+    client,
+    db_session,
+    checkout_data,
+    placed_order,
+):
+    _, _, headers = checkout_data
+    order_id = placed_order["id"]
+
+    order = await db_session.get(Order, order_id)
+    assert order is not None
+
+    order.status = OrderStatus.PAID
+    await db_session.commit()
+
+    response = await client.post(
+        f"/api/v1/orders/{order_id}/cancel",
+        headers=headers,
+    )
+
+    assert response.status_code == 409
+    assert response.json() == {
+        "detail": "Only pending orders can be cancelled",
+    }
+
+    await db_session.refresh(order)
+
+    assert order.status == OrderStatus.PAID
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [UserRole.CUSTOMER, UserRole.ADMIN])
+async def test_other_user_cannot_cancel_order(
+    client,
+    db_session,
+    placed_order,
+    role,
+):
+    other_user = User(
+        name="Other User",
+        email="other-canceller@example.com",
+        password_hash="unused-in-this-test",
+        status=UserStatus.ACTIVE,
+        role=role,
+    )
+
+    db_session.add(other_user)
+    await db_session.flush()
+
+    headers = {
+        "Authorization": f"Bearer {create_access_token(other_user.id)}",
+    }
+
+    response = await client.post(
+        f"/api/v1/orders/{placed_order['id']}/cancel",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Order not found"}
+
+    order = await db_session.get(Order, placed_order["id"])
+    assert order is not None
+
+    await db_session.refresh(order)
+
+    assert order.status == OrderStatus.PENDING
+
+
+@pytest.mark.asyncio
+async def test_cancel_missing_order_returns_404(client, checkout_data):
+    _, _, headers = checkout_data
+
+    response = await client.post(
+        "/api/v1/orders/9223372036854775807/cancel",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Order not found"}
+
+
+@pytest.mark.asyncio
+async def test_cancel_order_requires_authentication(client, placed_order):
+    response = await client.post(
+        f"/api/v1/orders/{placed_order['id']}/cancel",
+    )
+
+    assert response.status_code == 401

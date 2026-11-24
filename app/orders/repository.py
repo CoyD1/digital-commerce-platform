@@ -87,3 +87,23 @@ class OrderRepository:
         result = await self._session.execute(statement)
 
         return list(result.mappings().all())
+
+    async def get_by_id_for_user_for_update(
+        self,
+        *,
+        order_id: int,
+        user_id: int,
+    ) -> Order | None:
+        statement = (
+            select(Order)
+            .where(
+                Order.id == order_id,
+                Order.user_id == user_id,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+
+        result = await self._session.execute(statement)
+
+        return result.scalar_one_or_none()

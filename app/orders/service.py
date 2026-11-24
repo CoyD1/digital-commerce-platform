@@ -16,6 +16,14 @@ class ProductsUnavailableError(Exception):
     pass
 
 
+class OrderNotFoundError(Exception):
+    pass
+
+
+class OrderCannotBeCancelledError(Exception):
+    pass
+
+
 class OrderService:
     def __init__(
         self,
@@ -61,3 +69,27 @@ class OrderService:
         ]
 
         return await self._orders.create(order, items)
+
+    async def cancel(
+        self,
+        *,
+        order_id: int,
+        user_id: int,
+    ) -> Order:
+        order = await self._orders.get_by_id_for_user_for_update(
+            order_id=order_id,
+            user_id=user_id,
+        )
+
+        if order is None:
+            raise OrderNotFoundError
+
+        if order.status == OrderStatus.CANCELLED:
+            return order
+
+        if order.status != OrderStatus.PENDING:
+            raise OrderCannotBeCancelledError
+
+        order.status = OrderStatus.CANCELLED
+
+        return order

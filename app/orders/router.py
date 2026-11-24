@@ -16,6 +16,8 @@ from app.orders.schemas import (
 from app.orders.service import (
     DuplicateProductsError,
     EmptyOrderError,
+    OrderCannotBeCancelledError,
+    OrderNotFoundError,
     OrderService,
     ProductsUnavailableError,
 )
@@ -143,3 +145,62 @@ async def get_order(
         ),
         items=[OrderItemRead.model_validate(item) for item in items],
     )
+
+
+@router.post("/{order_id}/cancel", response_model=OrderRead)
+async def cancel_order(
+    order_id: Annotated[int, Path(gt=0, le=9223372036854775807)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> OrderRead:
+    orders = OrderRepository(session)
+    service = OrderService(
+        order_repository=orders,
+        product_repository=ProductRepository(session),
+    )
+
+    try:
+        order = await service.cancel(
+            order_id=order_id,
+            user_id=current_user.id,
+        )
+
+        items = await orders.list_items_for_user(
+            order_id=order.id,
+            user_id=current_user.id,
+        )
+
+        response = OrderRead(
+            id=order.id,
+            status=order.status,
+            currency=order.currency,
+            total_amount=sum(
+                (item.unit_price_amount for item in items),
+                Decimal("0.00"),
+            ),
+            items=[OrderItemRead.model_validate(item) for item in items],
+        )
+
+        await session.commit()
+
+    except OrderNotFoundError:
+        await session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        ) from None
+
+    except OrderCannotBeCancelledError:
+        await session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only pending orders can be cancelled",
+        ) from None
+
+    except Exception:
+        await session.rollback()
+        raise
+
+    return response
