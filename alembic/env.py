@@ -4,7 +4,8 @@ from sqlalchemy import engine_from_config, pool
 
 import app.catalog.model
 import app.orders.model
-import app.users  # noqa: F401 -- registers models in Base.metadata
+import app.users.model
+import app.wallets.model  # noqa: F401
 from alembic import context
 from app.db.base import Base
 
