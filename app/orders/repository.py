@@ -1,4 +1,5 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
+from sqlalchemy.engine import RowMapping
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.orders.model import Order, OrderItem
@@ -59,3 +60,30 @@ class OrderRepository:
         result = await self._session.execute(statement)
 
         return list(result.scalars().all())
+
+    async def list_for_user(
+        self,
+        *,
+        user_id: int,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[RowMapping]:
+        statement = (
+            select(
+                Order.id,
+                Order.status,
+                Order.currency,
+                Order.created_at,
+                func.sum(OrderItem.unit_price_amount).label("total_amount"),
+            )
+            .join(OrderItem, OrderItem.order_id == Order.id)
+            .where(Order.user_id == user_id)
+            .group_by(Order.id)
+            .order_by(Order.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        result = await self._session.execute(statement)
+
+        return list(result.mappings().all())

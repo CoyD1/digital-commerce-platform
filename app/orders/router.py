@@ -1,13 +1,18 @@
 from decimal import Decimal
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.catalog.repository import ProductRepository
 from app.db.session import get_session
 from app.orders.repository import OrderRepository
-from app.orders.schemas import OrderCreate, OrderItemRead, OrderRead
+from app.orders.schemas import (
+    OrderCreate,
+    OrderItemRead,
+    OrderRead,
+    OrderSummary,
+)
 from app.orders.service import (
     DuplicateProductsError,
     EmptyOrderError,
@@ -58,10 +63,7 @@ async def create_order(
                 (item.unit_price_amount for item in items),
                 Decimal("0.00"),
             ),
-            items=[
-                OrderItemRead.model_validate(item)
-                for item in items
-            ],
+            items=[OrderItemRead.model_validate(item) for item in items],
         )
 
         await session.commit()
@@ -87,3 +89,57 @@ async def create_order(
         raise
 
     return response
+
+
+@router.get("", response_model=list[OrderSummary])
+async def list_orders(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[OrderSummary]:
+    repository = OrderRepository(session)
+
+    rows = await repository.list_for_user(
+        user_id=current_user.id,
+        limit=limit,
+        offset=offset,
+    )
+
+    return [OrderSummary.model_validate(row) for row in rows]
+
+
+@router.get("/{order_id}", response_model=OrderRead)
+async def get_order(
+    order_id: Annotated[int, Path(gt=0, le=9223372036854775807)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> OrderRead:
+    repository = OrderRepository(session)
+
+    order = await repository.get_by_id_for_user(
+        order_id=order_id,
+        user_id=current_user.id,
+    )
+
+    if order is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Order not found",
+        )
+
+    items = await repository.list_items_for_user(
+        order_id=order.id,
+        user_id=current_user.id,
+    )
+
+    return OrderRead(
+        id=order.id,
+        status=order.status,
+        currency=order.currency,
+        total_amount=sum(
+            (item.unit_price_amount for item in items),
+            Decimal("0.00"),
+        ),
+        items=[OrderItemRead.model_validate(item) for item in items],
+    )

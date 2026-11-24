@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.catalog.model import Product, ProductStatus
 from app.core.security import create_access_token
 from app.orders.model import Order, OrderItem
-from app.users.model import User, UserStatus
+from app.users.model import User, UserRole, UserStatus
 
 
 @pytest_asyncio.fixture
@@ -44,6 +44,21 @@ async def checkout_data(db_session):
     }
 
     return buyer, products, headers
+
+
+@pytest_asyncio.fixture
+async def placed_order(client, checkout_data):
+    _, products, headers = checkout_data
+
+    response = await client.post(
+        "/api/v1/orders",
+        json={"product_ids": [product.id for product in products]},
+        headers=headers,
+    )
+
+    assert response.status_code == 201
+
+    return response.json()
 
 
 @pytest.mark.asyncio
@@ -162,3 +177,173 @@ async def test_unavailable_product_rejects_entire_order(
     }
     assert await db_session.scalar(select(Order.id)) is None
     assert await db_session.scalar(select(OrderItem.id)) is None
+
+
+@pytest.mark.asyncio
+async def test_get_order_keeps_purchase_data(
+    client,
+    db_session,
+    checkout_data,
+    placed_order,
+):
+    _, products, headers = checkout_data
+
+    products[0].title = "New Course Title"
+    products[0].price_amount = Decimal("9999.00")
+    await db_session.commit()
+
+    response = await client.get(
+        f"/api/v1/orders/{placed_order['id']}",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json() == placed_order
+
+    list_response = await client.get(
+        "/api/v1/orders",
+        headers=headers,
+    )
+
+    assert list_response.status_code == 200
+    assert list_response.json()[0]["total_amount"] == "2489.90"
+
+
+@pytest.mark.asyncio
+async def test_list_orders_returns_summaries_and_pagination(
+    client,
+    checkout_data,
+):
+    _, products, headers = checkout_data
+    created = []
+
+    for _ in range(3):
+        response = await client.post(
+            "/api/v1/orders",
+            json={"product_ids": [product.id for product in products]},
+            headers=headers,
+        )
+
+        assert response.status_code == 201
+        created.append(response.json())
+
+    response = await client.get(
+        "/api/v1/orders",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert [order["id"] for order in body] == [
+        order["id"] for order in reversed(created)
+    ]
+    assert all(order["total_amount"] == "2489.90" for order in body)
+    assert all(order["status"] == "PENDING" for order in body)
+    assert all(order["currency"] == "RUB" for order in body)
+    assert all("created_at" in order for order in body)
+    assert all("items" not in order for order in body)
+
+    page = await client.get(
+        "/api/v1/orders?limit=1&offset=1",
+        headers=headers,
+    )
+
+    assert page.status_code == 200
+    assert [order["id"] for order in page.json()] == [created[1]["id"]]
+
+    empty_page = await client.get(
+        "/api/v1/orders?offset=100",
+        headers=headers,
+    )
+
+    assert empty_page.status_code == 200
+    assert empty_page.json() == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", [UserRole.CUSTOMER, UserRole.ADMIN])
+async def test_other_user_cannot_read_orders(
+    client,
+    db_session,
+    placed_order,
+    role,
+):
+    other_user = User(
+        name="Other User",
+        email="other-order-reader@example.com",
+        password_hash="unused-in-this-test",
+        status=UserStatus.ACTIVE,
+        role=role,
+    )
+
+    db_session.add(other_user)
+    await db_session.flush()
+
+    headers = {
+        "Authorization": f"Bearer {create_access_token(other_user.id)}",
+    }
+
+    detail_response = await client.get(
+        f"/api/v1/orders/{placed_order['id']}",
+        headers=headers,
+    )
+
+    assert detail_response.status_code == 404
+    assert detail_response.json() == {"detail": "Order not found"}
+
+    list_response = await client.get(
+        "/api/v1/orders",
+        headers=headers,
+    )
+
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_get_missing_order_returns_404(client, checkout_data):
+    _, _, headers = checkout_data
+
+    response = await client.get(
+        "/api/v1/orders/9223372036854775807",
+        headers=headers,
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Order not found"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path",
+    ["/api/v1/orders", "/api/v1/orders/1"],
+)
+async def test_read_orders_requires_authentication(client, path):
+    response = await client.get(path)
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/v1/orders?limit=0",
+        "/api/v1/orders?limit=101",
+        "/api/v1/orders?offset=-1",
+        "/api/v1/orders/0",
+        "/api/v1/orders/9223372036854775808",
+    ],
+)
+async def test_read_orders_rejects_invalid_parameters(
+    client,
+    checkout_data,
+    path,
+):
+    _, _, headers = checkout_data
+
+    response = await client.get(path, headers=headers)
+
+    assert response.status_code == 422

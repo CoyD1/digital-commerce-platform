@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from typing import Annotated
 
@@ -42,3 +43,11 @@ class OrderRead(BaseModel):
     currency: str
     total_amount: Decimal
     items: list[OrderItemRead]
+
+
+class OrderSummary(BaseModel):
+    id: int
+    status: OrderStatus
+    currency: str
+    total_amount: Decimal
+    created_at: datetime
